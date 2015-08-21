@@ -24,7 +24,7 @@ def get_mac(sw):
     
      Returns a hash with the MAC address as the key and the port as the value.
      Values are stored in the same format returned by NX-OS
-     e.x. { '1234.5678.90ab' : 'Ethernet1/1' }
+     ex { '1234.5678.90ab' : 'Ethernet1/1' }
     """
     
     result = {}
@@ -46,7 +46,7 @@ def get_arp(sw):
     
      Returns a hash with the MAC address as the key and the IP Address as the value.
      Values are stored in the same format returned by NX-OS
-     e.x. { '1234.5678.90ab' : '10.10.10.10' }
+     ex { '1234.5678.90ab' : '10.10.10.10' }
     """
     
     result={}
