@@ -5,7 +5,7 @@
     M. Odom, S. Sloan, S. Tsai, D. Virk
 
     Obtains the MAC and ARP tables from NX-OS to determine which IP address is present on a switchport,
-    then executes a reverse DNS query to attempt to resolve the hostname.
+    then executes a DNS query to attempt to resolve the hostname.
     If a hostname can be resolved, update the switchport description field.
     
     This script does not understand VRF or handle multiple IP's on a switchport
@@ -99,7 +99,7 @@ def main():
         # If the MAC address is present in the ARP table
         if mac_entry in arp_table:
 
-            #Attempt a reverse DNS lookup.  gethostbyaddr will throw an exception if host is not found
+            #Attempt name resolution.  gethostbyaddr will throw an exception if host is not found
             try:
                 
                 ip_address = arp_table[mac_entry]
