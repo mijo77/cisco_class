@@ -1,5 +1,15 @@
+"""
+    apic_epgStats.py
+    
+    Dumps the last 24 15-minute EPG status entries into a CSV file.  
+    Interactively prompts the user to select the EPG.
+    
+    Demonstrates obtaining data with REST and cobra methods.
+    
+    Will throw exception if there is no data in the EPG status, ensure the EPG data...
+"""
+
 import requests
-#import json
 import xmltodict
 import re
 import argparse
@@ -7,20 +17,25 @@ import getpass
 from cobra.mit.session import LoginSession
 from cobra.mit.access import MoDirectory
 
+# Disable SSL validation warnings
 requests.packages.urllib3.disable_warnings()
 
 def apic_login(session, hostname, username, password):
-
+    # Login to the APIC using REST method
+    
     auth_payload = "<aaaUser name='{}' pwd='{}'/>".format(username, password)
     session.post(hostname+'/api/aaaLogin.xml', auth_payload, verify=False)
     
 def get_EPG_stats(session, url):
-
+    # Obtain ingress counters using REST
+    
     r_tmp = session.get(url,verify=False)
     response = xmltodict.parse(r_tmp.content)['imdata']['l2IngrBytesAgHist15min']
     return response
 
 def mo_apic_login(hostname, username, password):
+    # Login to the APIC using cobra module
+    
     url = hostname
     sess = LoginSession(url, username, password)
     modir = MoDirectory(sess)
@@ -32,6 +47,7 @@ def mo_apic_login(hostname, username, password):
     return modir
 
 def mo_build_uri(hostname,username,password):
+    # Interactively walk the user through the schema to find the desired EPG using cobra
     
     tenant_list = []
     ap_list = []
@@ -113,19 +129,21 @@ if __name__ == '__main__':
     
     headerwritten = False
 
+    # Setup parser module to process command line arguments
     parser = argparse.ArgumentParser(description='Obtain EGP traffic statistics.')
     parser.add_argument('-i', '--hostname', help='IP or hostname of APIC')
     parser.add_argument('-u', '--username', help='APIC username')
     parser.add_argument('-p', '--password', help='APIC password')
     parser.add_argument('-f', '--filename', help='Output filename')
-    
     args = parser.parse_args()
-    
+
+    # Interactively prompt user for any missing arguments    
     if args.hostname:
         hostname = args.hostname
     else: 
         hostname = raw_input("Enter Hostname: ")
-        
+    
+    # Add 'https://' to the hostname if it was not entered by the user    
     if not(hostname.startswith('https://')):
         hostname = "https://" + hostname
     
@@ -145,32 +163,35 @@ if __name__ == '__main__':
         filename = raw_input("Enter output filename: ")
     
     
+    # Setup REST session
     sess = requests.Session()    
     apic_login(sess, hostname, username, password)
     
     outfile = open(filename, 'w')
-    
+
+    # Build DN portion of URI from interactive prompts    
     dn = mo_build_uri(hostname,username,password)
-    
     print "\n\n\nPulling EPG stats from " + dn
 
-    for i in range(0,25):
-        #response = get_EPG_stats(sess, hostname + '/api/node/mo/uni/tn-Commercial/ap-Sharepoint/epg-Database/HDl2IngrBytesAg15min-' + str(i) + '.xml')
+
+    # Cycle through the most current 24 HDl2IngrBytesAg15min elements and write the results in CSV format.
+    for i in range(0,25): # Row
         response = get_EPG_stats(sess, hostname + '/api/node/mo/' + dn + '/HDl2IngrBytesAg15min-' + str(i) + '.xml')
         
-        remove_char = re.compile('^\@')
         
-        # Write the header on the first row
+        # Write the header on the first row of the file.  Header is built from the response keys
+        # Some header rows have a @ prefix... Let's strip it off
+        remove_char = re.compile('^\@')
         if not(headerwritten):
-            for each in response:
+            for each in response:  # Column
                 outfile.write(remove_char.sub("", each) + ",")
-            outfile.write("\n")
+            outfile.write("\n")  # End of Header row
             headerwritten = True
         
         print "Writing CSV row " + str(i)
         
-        # Write data rows
-        for each in response:
+        # Write data row
+        for each in response: # put each value in a Column
             outfile.write(response[each] + ",")
         outfile.write("\n")
         
